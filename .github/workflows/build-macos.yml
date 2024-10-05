@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
   build-macos:
@@ -17,22 +14,21 @@ jobs:
         target: [x86_64-apple-darwin, aarch64-apple-darwin]
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout the repository (using the latest stable version)
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Step 2: Install Rust and the macOS cross-compilation targets
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          components: rustfmt, clippy
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          rustup target add ${{ matrix.target }}
 
       # Step 3: Install dependencies for building Rust
       - name: Install dependencies
         run: |
-          brew install cmake pkg-config openssl
+          brew install --formula cmake pkg-config openssl
 
       # Step 4: Set the minimum macOS deployment target to macOS 12 (Monterey)
       - name: Set macOS deployment target
@@ -42,7 +38,6 @@ jobs:
       # Step 5: Build the binaries for the target (x86_64-apple-darwin or aarch64-apple-darwin)
       - name: Build macOS Binary
         run: |
-          rustup target add ${{ matrix.target }}
           cargo build --release --target ${{ matrix.target }}
 
       # Step 6: Create a universal binary (fat binary)
