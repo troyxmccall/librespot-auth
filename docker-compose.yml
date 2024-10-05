@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  librespot-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: librespot-auth:latest
+    container_name: librespot-auth
+    volumes:
+      - ./data:/app/data 
