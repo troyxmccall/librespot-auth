@@ -1,9 +1,9 @@
 use clap::Parser;
 use futures::StreamExt;
 use librespot_core::authentication::Credentials;
+use librespot_core::SessionConfig;
 use librespot_core::config::DeviceType;
-use librespot_core::session::SessionConfig;
-use librespot_discovery::DiscoveryServer;
+use librespot_discovery::Discovery;
 use sha1::{Digest, Sha1};
 use serde_json;
 use std::fs::File;
@@ -21,8 +21,6 @@ struct Args {
     path: String,
     #[arg(short, long, default_value = "speaker")]
     class: String,
-    #[arg(short, long, default_value_t = 39733)] // Zeroconf port can be set with a value of 0 (random port)
-    port: u16,
 }
 
 pub fn save_credentials_and_exit(location: &str, cred: &Credentials) {
@@ -54,34 +52,15 @@ async fn main() {
         }
     };
 
-    // Set up the SessionConfig
-    let session_config = SessionConfig {
-        device_id: device_id.clone(),
-        ..Default::default()
-    };
+    let mut server = Discovery::builder(device_id.clone(), SessionConfig::default().client_id)
+        .name(name.clone())
+        .device_type(device_type)
+        .launch()
+        .unwrap();
 
-    // Set up the DiscoveryServer with the provided zeroconf port
-    let server = DiscoveryServer::new(
-        session_config,
-        device_type,
-        name.clone(),
-        args.port, // Pass the zeroconf port
-    );
+    println!("Open Spotify and select output device: {}", name);
 
-    println!(
-        "Open Spotify and select output device: {} on port {}",
-        name,
-        if args.port == 0 {
-            "random port".to_string()
-        } else {
-            args.port.to_string()
-        }
-    );
-
-    // Run the discovery server and wait for incoming credentials
-    let mut discovery_server = server.unwrap();
-
-    while let Some(credentials) = discovery_server.next().await {
+    while let Some(credentials) = server.next().await {
         save_credentials_and_exit(&credentials_location, &credentials);
     }
 }
