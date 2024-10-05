@@ -1,0 +1,60 @@
+name: Build macOS Universal Binary
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Install Rust and the macOS cross-compilation targets
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          components: rustfmt, clippy
+
+      # Step 3: Install dependencies for building Rust
+      - name: Install dependencies
+        run: |
+          brew install cmake pkg-config openssl
+
+      # Step 4: Set the minimum macOS deployment target to macOS 12 (Monterey)
+      - name: Set macOS deployment target
+        run: |
+          echo "RUSTFLAGS='-C link-args=-mmacosx-version-min=12.0'" >> $GITHUB_ENV
+
+      # Step 5: Build the binaries for the target (x86_64-apple-darwin or aarch64-apple-darwin)
+      - name: Build macOS Binary
+        run: |
+          rustup target add ${{ matrix.target }}
+          cargo build --release --target ${{ matrix.target }}
+
+      # Step 6: Create a universal binary (fat binary)
+      - name: Create Universal Binary (Fat Binary)
+        run: |
+          lipo -create -output librespot-auth-universal \
+            target/x86_64-apple-darwin/release/librespot-auth \
+            target/aarch64-apple-darwin/release/librespot-auth
+
+      # Step 7: Upload the universal binary as an artifact
+      - name: Upload Universal Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: librespot-auth-universal
+          path: librespot-auth-universal
