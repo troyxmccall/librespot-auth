@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   librespot-auth:
-    ports:
-      - "39733:39733" # Map container port 39733 to host port 39733
+    network_mode: host
     build:
       context: .
       dockerfile: Dockerfile

@@ -1,16 +1,8 @@
-# Stage 1: Build the Rust application for macOS
-FROM rust:slim-bullseye AS builder
+# Stage 1: Build the Rust application
+FROM rust:alpine AS builder
 
-# Install build dependencies for macOS cross-compilation
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libssl-dev \
-    pkg-config \
-    cmake \
-    clang \
-    lld \
-    curl \
-    && rustup target add x86_64-apple-darwin aarch64-apple-darwin
+# Install build dependencies
+RUN apk add --no-cache musl-dev
 
 # Set the working directory
 WORKDIR /usr/src/app
@@ -18,26 +10,17 @@ WORKDIR /usr/src/app
 # Copy source code
 COPY . .
 
-# Build the application for macOS (Intel/AMD)
-RUN cargo build --release --target x86_64-apple-darwin
+# Build the application
+RUN cargo build --release
 
-# Build the application for macOS (ARM - Apple Silicon)
-RUN cargo build --release --target aarch64-apple-darwin
-
-# Stage 2: Create a minimal runtime environment
+# Stage 2: Create a minimal Alpine runtime environment
 FROM alpine:latest
 
-# Install necessary runtime dependencies (only if running the app inside a Linux container)
+# Install necessary runtime dependencies
 RUN apk add --no-cache ca-certificates
 
-# Copy the macOS Rust binary for Intel/AMD from the builder stage
-COPY --from=builder /usr/src/app/target/x86_64-apple-darwin/release/librespot-auth /usr/local/bin/librespot-auth-amd64
+# Copy the Rust binary from the builder stage
+COPY --from=builder /usr/src/app/target/release/librespot-auth /usr/local/bin/librespot-auth
 
-# Copy the macOS Rust binary for Apple Silicon/ARM from the builder stage
-COPY --from=builder /usr/src/app/target/aarch64-apple-darwin/release/librespot-auth /usr/local/bin/librespot-auth-arm64
-
-# Note: You cannot run these binaries in the container itself
-# This container is only used to build and extract the binaries
-
-# Optionally set the entry point if you'd like, but these binaries won't run in a Linux environment
-ENTRYPOINT ["/bin/sh"]
+# Set the entry point
+ENTRYPOINT ["/usr/local/bin/librespot-auth"]
