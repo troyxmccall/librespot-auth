@@ -37,4 +37,9 @@ $ ./target/release/librespot-auth --name "Second Laptop" --class=computer
 Open Spotify and select output device: Second Laptop
 ```
 
+docker version (make sure firewalld is temporarily disabled on your local linux box with host network binding)
+```bash
+docker-compose run librespot-auth --path=/app/data/credentials.json
+```
+
 Open the Spotify client from a machine on the same network as you ran this, ensuring no proxy is in use that may interfere with zeroconf. Select the speaker you just defined, i.e. "Second Laptop", as an output device. The credentials are then saved to `credentials.json` in the provided path. Ensure spotifyd is stopped, i.e. `sudo systemctl stop spotifyd`, copy this file to your spotifyd `cache_directory`, and then start spotifyd again (`sudo systemctl start spotifyd`).
